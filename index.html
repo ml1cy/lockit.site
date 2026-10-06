@@ -3,230 +3,753 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>lockit.site</title>
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#07090f" />
+    <meta name="description" content="Walking away from your desk? Press Windows + L. One second, zero memes." />
+    <title>lockit.site — Press Win + L</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237cc4ff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='10.5' width='16' height='10.5' rx='2.5'/%3E%3Cpath d='M8 10.5V7a4 4 0 0 1 8 0v3.5'/%3E%3C/svg%3E"
+    />
     <style>
       :root {
-        --bg-a: #090d1a;
-        --bg-b: #1a0f2f;
-        --bg-c: #10253a;
-        --text: #eef4ff;
-        --accent: #72f7d3;
-        --accent-2: #8fb7ff;
+        --bg: #07090f;
+        --surface: rgba(255, 255, 255, 0.04);
+        --surface-strong: rgba(255, 255, 255, 0.07);
+        --line: rgba(255, 255, 255, 0.09);
+        --line-strong: rgba(255, 255, 255, 0.16);
+        --text: #f3f5fa;
+        --text-2: rgba(243, 245, 250, 0.66);
+        --text-3: rgba(243, 245, 250, 0.42);
+        --accent: #7cc4ff;
+        --accent-strong: #3d9bff;
+        --ok: #6ee7b7;
+
+        --cap-top: #fbfcfe;
+        --cap-side: #c9d0dd;
+        --cap-ink: #0d1424;
+
+        --radius: 20px;
+        --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+        --font: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui,
+          -apple-system, "Helvetica Neue", Arial, sans-serif;
+        --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
       }
 
-      * {
+      *,
+      *::before,
+      *::after {
         box-sizing: border-box;
       }
 
+      html,
       body {
         margin: 0;
-        min-height: 100vh;
-        font-family:
-          "Space Grotesk",
-          Inter,
-          system-ui,
-          -apple-system,
-          sans-serif;
+        background: var(--bg);
         color: var(--text);
-        background: linear-gradient(-35deg, var(--bg-a), var(--bg-b), var(--bg-c));
-        background-size: 240% 240%;
-        animation: bgShift 16s ease infinite;
+        font-family: var(--font);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      body {
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        overflow-x: hidden;
+      }
+
+      /* ---------- Backdrop: a quiet, Windows-11-style bloom ---------- */
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
         overflow: hidden;
       }
 
-      .noise,
-      .grid {
-        position: fixed;
+      .bloom {
+        position: absolute;
+        left: 50%;
+        top: 58%;
+        width: min(1200px, 140vw);
+        aspect-ratio: 1.6;
+        translate: -50% -50%;
+        background:
+          radial-gradient(closest-side at 38% 55%, rgba(61, 155, 255, 0.38), transparent 70%),
+          radial-gradient(closest-side at 64% 46%, rgba(124, 92, 255, 0.28), transparent 72%),
+          radial-gradient(closest-side at 52% 70%, rgba(40, 214, 196, 0.16), transparent 70%);
+        filter: blur(40px);
+        animation: breathe 14s ease-in-out infinite alternate;
+      }
+
+      .backdrop::after {
+        content: "";
+        position: absolute;
         inset: 0;
-        pointer-events: none;
-      }
-
-      .noise {
-        opacity: 0.1;
-        background-image: radial-gradient(rgba(255, 255, 255, 0.45) 1px, transparent 1px);
-        background-size: 3px 3px;
-        mix-blend-mode: soft-light;
-      }
-
-      .grid {
         background-image:
-          linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-        background-size: 48px 48px;
-        mask-image: radial-gradient(circle at center, black 24%, transparent 88%);
+          linear-gradient(var(--line) 1px, transparent 1px),
+          linear-gradient(90deg, var(--line) 1px, transparent 1px);
+        background-size: 64px 64px;
+        mask-image: radial-gradient(ellipse 70% 55% at 50% 45%, #000 10%, transparent 75%);
+        opacity: 0.55;
       }
 
-      .halo {
-        position: fixed;
-        width: 60vmax;
-        aspect-ratio: 1;
-        border-radius: 999px;
-        filter: blur(64px);
-        opacity: 0.42;
-        animation: drift 18s ease-in-out infinite alternate;
-      }
-
-      .halo.one {
-        left: -12vmax;
-        top: -14vmax;
-        background: #4c8dff;
-      }
-
-      .halo.two {
-        right: -18vmax;
-        bottom: -16vmax;
-        background: #3ff8c2;
-        animation-delay: 1.3s;
-      }
-
-      main {
+      /* ---------- Layout ---------- */
+      .wrap {
         position: relative;
-        z-index: 2;
-        min-height: 100vh;
+        z-index: 1;
+        width: min(1080px, 100%);
+        margin: 0 auto;
+        padding: 0 clamp(16px, 4vw, 40px);
+      }
+
+      header.wrap {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 22px;
+        padding-bottom: 22px;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        font-size: 15px;
+        letter-spacing: -0.01em;
+        color: var(--text);
+        text-decoration: none;
+      }
+
+      .brand-mark {
         display: grid;
         place-items: center;
-        padding: 1.5rem;
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        background: var(--surface-strong);
+        border: 1px solid var(--line-strong);
+        color: var(--accent);
       }
 
-      .card {
-        width: min(880px, 100%);
-        padding: clamp(1.5rem, 3vw, 2.4rem);
-        border-radius: 24px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        background: rgba(9, 15, 30, 0.6);
-        backdrop-filter: blur(8px);
-        box-shadow:
-          0 22px 42px rgba(0, 0, 0, 0.4),
-          inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      .clock {
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--text-3);
+        font-variant-numeric: tabular-nums;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .clock::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--ok);
+        box-shadow: 0 0 0 3px rgba(110, 231, 183, 0.15);
+      }
+
+      main.wrap {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding-top: clamp(24px, 6vh, 64px);
+        padding-bottom: clamp(32px, 8vh, 80px);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 22px;
+        padding: 6px 12px 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line-strong);
+        background: var(--surface);
+        backdrop-filter: blur(10px);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-2);
+      }
+
+      .eyebrow svg {
+        color: var(--accent);
       }
 
       h1 {
         margin: 0;
-        line-height: 1;
-        font-size: clamp(2.2rem, 7vw, 5.4rem);
-        letter-spacing: 0.03em;
+        font-size: clamp(2.6rem, 8.4vw, 6.25rem);
+        line-height: 0.98;
+        font-weight: 700;
+        letter-spacing: -0.045em;
+        text-wrap: balance;
       }
 
-      .sub {
-        margin: 0.7rem 0 1.7rem;
-        color: rgba(238, 244, 255, 0.86);
-        font-size: clamp(1rem, 2.2vw, 1.2rem);
+      h1 .soft {
+        background: linear-gradient(180deg, #fff 10%, rgba(255, 255, 255, 0.5));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      h1 .accent {
+        background: linear-gradient(100deg, #b7dcff 0%, var(--accent) 40%, #a79bff 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .lede {
+        max-width: 36ch;
+        margin: 22px auto 0;
+        font-size: clamp(1.02rem, 2vw, 1.22rem);
+        line-height: 1.5;
+        color: var(--text-2);
+        text-wrap: pretty;
+      }
+
+      /* ---------- Shortcut stage ---------- */
+      .stage {
+        position: relative;
+        margin-top: clamp(36px, 7vh, 64px);
+        padding: clamp(22px, 4vw, 34px) clamp(22px, 5vw, 44px);
+        border-radius: 28px;
+        border: 1px solid var(--line-strong);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015)),
+          rgba(10, 14, 24, 0.55);
+        backdrop-filter: blur(18px) saturate(140%);
+        box-shadow:
+          0 30px 80px -20px rgba(0, 0, 0, 0.7),
+          inset 0 1px 0 rgba(255, 255, 255, 0.08);
       }
 
       .combo {
-        display: inline-flex;
-        gap: 0.75rem;
+        display: flex;
         align-items: center;
-        border: 1px solid rgba(255, 255, 255, 0.28);
-        border-radius: 999px;
-        padding: 0.42rem 0.8rem;
-        background: rgba(255, 255, 255, 0.08);
+        justify-content: center;
+        gap: clamp(14px, 3vw, 24px);
+      }
+
+      .plus {
+        font-size: clamp(22px, 4vw, 30px);
+        font-weight: 300;
+        color: var(--text-3);
       }
 
       .key {
-        min-width: 3.2rem;
-        text-align: center;
-        border-radius: 10px;
-        padding: 0.42rem 0.66rem;
-        background: rgba(255, 255, 255, 0.97);
-        color: #0f1931;
-        font-weight: 700;
+        --depth: 7px;
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: clamp(84px, 17vw, 116px);
+        aspect-ratio: 1;
+        border-radius: 18px;
+        background: linear-gradient(180deg, var(--cap-top), #eef1f6);
+        color: var(--cap-ink);
         box-shadow:
-          0 4px 0 rgba(0, 0, 0, 0.28),
-          0 0 0 1px rgba(0, 0, 0, 0.08) inset;
-        animation: pulse 1.8s ease-in-out infinite;
+          0 var(--depth) 0 var(--cap-side),
+          0 calc(var(--depth) + 14px) 28px -6px rgba(0, 0, 0, 0.6),
+          inset 0 -2px 0 rgba(13, 20, 36, 0.06),
+          inset 0 1px 0 #fff;
+        transform: translateY(0);
+        transition:
+          transform 120ms var(--ease),
+          box-shadow 120ms var(--ease);
+        user-select: none;
       }
 
-      .key:nth-child(2) {
-        animation-delay: 0.2s;
+      .key::after {
+        /* the soft dish on top of the cap */
+        content: "";
+        position: absolute;
+        inset: 9px;
+        border-radius: 12px;
+        background: radial-gradient(120% 90% at 50% 15%, rgba(255, 255, 255, 0.9), rgba(13, 20, 36, 0.03));
+        pointer-events: none;
       }
 
-      .caption {
-        margin-left: 0.2rem;
+      .key > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      .key .win-logo {
+        width: 42%;
+        height: auto;
+        color: #0067c0;
+      }
+
+      .key .letter {
+        font-size: clamp(34px, 7vw, 48px);
         font-weight: 600;
-        color: var(--accent);
-        letter-spacing: 0.02em;
+        letter-spacing: -0.02em;
+        line-height: 1;
+      }
+
+      .key.is-down {
+        --depth: 1px;
+        transform: translateY(6px);
+        box-shadow:
+          0 var(--depth) 0 var(--cap-side),
+          0 6px 14px -4px rgba(0, 0, 0, 0.55),
+          0 0 0 4px rgba(124, 196, 255, 0.35),
+          inset 0 1px 0 #fff;
+      }
+
+      .status {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin: 30px 0 0;
+        min-height: 24px;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-2);
+      }
+
+      .status .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #f87171;
+        box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.18);
+        transition:
+          background 200ms,
+          box-shadow 200ms;
+      }
+
+      .status.locked .dot {
+        background: var(--ok);
+        box-shadow: 0 0 0 3px rgba(110, 231, 183, 0.18);
+      }
+
+      .status.locked {
+        color: var(--text);
+      }
+
+      .hint {
+        margin: 14px 0 0;
+        font-size: 13px;
+        color: var(--text-3);
+      }
+
+      kbd {
+        font-family: var(--mono);
+        font-size: 0.92em;
+        padding: 1px 6px;
+        border-radius: 6px;
+        border: 1px solid var(--line-strong);
+        border-bottom-width: 2px;
+        background: var(--surface);
+        color: var(--text-2);
+      }
+
+      /* ---------- Facts ---------- */
+      .facts {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1px;
+        width: min(760px, 100%);
+        margin: clamp(40px, 8vh, 72px) auto 0;
+        border-radius: var(--radius);
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: var(--line);
+      }
+
+      .fact {
+        padding: 22px 20px;
+        background: rgba(9, 12, 20, 0.82);
+        text-align: left;
+      }
+
+      .fact b {
+        display: block;
+        font-size: 28px;
+        font-weight: 650;
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .fact span {
+        display: block;
+        margin-top: 4px;
+        font-size: 13.5px;
+        line-height: 1.45;
+        color: var(--text-3);
+      }
+
+      /* ---------- Footer ticker ---------- */
+      footer {
+        position: relative;
+        z-index: 1;
+        border-top: 1px solid var(--line);
+        overflow: hidden;
+        mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
       }
 
       .ticker {
-        margin-top: 1.7rem;
-        border-top: 1px solid rgba(255, 255, 255, 0.18);
-        padding-top: 1rem;
-        color: rgba(238, 244, 255, 0.78);
-        font-size: 0.96rem;
+        display: flex;
+        width: max-content;
+        animation: slide 40s linear infinite;
+      }
+
+      .ticker p {
+        margin: 0;
+        padding: 16px 0;
         white-space: nowrap;
-        overflow: hidden;
-        position: relative;
+        font-size: 13px;
+        color: var(--text-3);
       }
 
-      .ticker span {
-        display: inline-block;
-        padding-left: 100%;
-        animation: slide 16s linear infinite;
+      .ticker p span {
+        margin: 0 22px;
+        color: var(--accent);
+        opacity: 0.6;
       }
 
-      @keyframes bgShift {
-        0% {
-          background-position: 0% 50%;
+      /* ---------- Lock overlay ---------- */
+      .lockscreen {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        display: grid;
+        place-items: center;
+        background: rgba(5, 7, 12, 0.72);
+        backdrop-filter: blur(24px) saturate(120%);
+        opacity: 0;
+        visibility: hidden;
+        transition:
+          opacity 360ms var(--ease),
+          visibility 0s linear 360ms;
+      }
+
+      .lockscreen.show {
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 360ms var(--ease);
+      }
+
+      .lockscreen-inner {
+        text-align: center;
+        transform: translateY(10px) scale(0.98);
+        transition: transform 500ms var(--ease);
+      }
+
+      .lockscreen.show .lockscreen-inner {
+        transform: none;
+      }
+
+      .lockscreen time {
+        display: block;
+        font-size: clamp(64px, 16vw, 132px);
+        font-weight: 600;
+        letter-spacing: -0.04em;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .lockscreen .date {
+        margin-top: 8px;
+        font-size: clamp(16px, 2.6vw, 22px);
+        color: var(--text-2);
+      }
+
+      .lockscreen .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 32px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: var(--surface-strong);
+        border: 1px solid var(--line-strong);
+        font-size: 13px;
+        color: var(--text-2);
+      }
+
+      /* ---------- Responsive ---------- */
+      @media (max-width: 640px) {
+        .facts {
+          grid-template-columns: 1fr;
         }
-        50% {
-          background-position: 100% 50%;
+
+        .fact {
+          display: flex;
+          align-items: baseline;
+          gap: 14px;
         }
-        100% {
-          background-position: 0% 50%;
+
+        .fact b {
+          min-width: 64px;
+          font-size: 22px;
+        }
+
+        .fact span {
+          margin: 0;
+        }
+
+        .hide-sm {
+          display: none;
         }
       }
 
-      @keyframes pulse {
-        0%,
-        100% {
-          transform: translateY(0);
+      @keyframes breathe {
+        from {
+          transform: scale(1) rotate(0deg);
+          opacity: 0.85;
         }
-        45% {
-          transform: translateY(2px);
+        to {
+          transform: scale(1.08) rotate(4deg);
+          opacity: 1;
         }
       }
 
       @keyframes slide {
-        from {
-          transform: translateX(0);
-        }
         to {
-          transform: translateX(-100%);
+          transform: translateX(-50%);
         }
       }
 
-      @keyframes drift {
-        from {
-          transform: translate(0, 0) scale(1);
+      @media (prefers-reduced-motion: reduce) {
+        .bloom,
+        .ticker {
+          animation: none;
         }
-        to {
-          transform: translate(7vmax, 4vmax) scale(1.06);
+
+        .key,
+        .lockscreen,
+        .lockscreen-inner {
+          transition: none;
         }
       }
     </style>
   </head>
   <body>
-    <div class="halo one" aria-hidden="true"></div>
-    <div class="halo two" aria-hidden="true"></div>
-    <div class="grid" aria-hidden="true"></div>
-    <div class="noise" aria-hidden="true"></div>
-    <main>
-      <section class="card">
-        <h1>LOCK IT, LEGEND.</h1>
-        <p class="sub">Your keyboard has one quest before lunch break.</p>
-        <div class="combo" aria-label="Windows plus L keyboard shortcut">
-          <span class="key">⊞ Win</span>
-          <span class="key">L</span>
-          <span class="caption">Lock your machine in 1 second.</span>
+    <div class="backdrop" aria-hidden="true"><div class="bloom"></div></div>
+
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="lock" viewBox="0 0 24 24">
+          <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="10.5" width="16" height="10.5" rx="2.5" />
+            <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
+          </g>
+        </symbol>
+        <!-- Windows logo: four panes -->
+        <symbol id="windows" viewBox="0 0 88 88">
+          <path fill="currentColor" d="M0 0h41.5v41.5H0zM46.5 0H88v41.5H46.5zM0 46.5h41.5V88H0zM46.5 46.5H88V88H46.5z" />
+        </symbol>
+      </defs>
+    </svg>
+
+    <header class="wrap">
+      <a class="brand" href="/">
+        <span class="brand-mark"><svg width="16" height="16"><use href="#lock" /></svg></span>
+        lockit.site
+      </a>
+      <span class="clock" id="clock" aria-label="Current time">--:--</span>
+    </header>
+
+    <main class="wrap">
+      <p class="eyebrow">
+        <svg width="14" height="14"><use href="#lock" /></svg>
+        Workstation etiquette, 101
+      </p>
+
+      <h1><span class="soft">Walking away?</span><br /><span class="accent">Lock it.</span></h1>
+
+      <p class="lede">
+        One shortcut. Under a second. The difference between a quiet lunch and becoming the
+        team&rsquo;s favourite meme.
+      </p>
+
+      <section class="stage" aria-label="Keyboard shortcut: Windows key plus L">
+        <div class="combo" role="img" aria-label="Windows key plus L">
+          <div class="key" id="key-win">
+            <svg class="win-logo" viewBox="0 0 88 88" aria-hidden="true"><use href="#windows" /></svg>
+          </div>
+          <span class="plus" aria-hidden="true">+</span>
+          <div class="key" id="key-l"><span class="letter" aria-hidden="true">L</span></div>
         </div>
-        <div class="ticker">
-          <span
-            >Security patch note: unlocked desktops now come with free class-wide memes •
-            press Win + L to avoid reputational packet loss •</span
-          >
-        </div>
+
+        <p class="status" id="status" aria-live="polite">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="status-text">Desktop unlocked</span>
+        </p>
+        <p class="hint">
+          <span class="hide-sm">Go on, try it here first &mdash; hold the Windows key and tap <kbd>L</kbd>.</span>
+          On a Mac? <kbd>⌃</kbd> <kbd>⌘</kbd> <kbd>Q</kbd>
+        </p>
       </section>
+
+      <div class="facts">
+        <div class="fact">
+          <b>&lt;1s</b>
+          <span>to lock your machine. Faster than standing up.</span>
+        </div>
+        <div class="fact">
+          <b>0</b>
+          <span>&ldquo;I love you all&rdquo; emails sent from your account.</span>
+        </div>
+        <div class="fact">
+          <b>100%</b>
+          <span>of your wallpaper stays the way you left it.</span>
+        </div>
+      </div>
     </main>
+
+    <footer aria-hidden="true">
+      <div class="ticker">
+        <p>
+          Unlocked desktops now ship with complimentary team-wide memes<span>◆</span>Press Win + L to
+          avoid reputational packet loss<span>◆</span>Your coffee can wait one second<span>◆</span>Trust,
+          but lock<span>◆</span>
+        </p>
+        <p>
+          Unlocked desktops now ship with complimentary team-wide memes<span>◆</span>Press Win + L to
+          avoid reputational packet loss<span>◆</span>Your coffee can wait one second<span>◆</span>Trust,
+          but lock<span>◆</span>
+        </p>
+      </div>
+    </footer>
+
+    <div class="lockscreen" id="lockscreen" role="dialog" aria-modal="true" aria-label="Locked">
+      <div class="lockscreen-inner">
+        <time id="lock-time">--:--</time>
+        <div class="date" id="lock-date"></div>
+        <div class="badge">
+          <svg width="14" height="14"><use href="#lock" /></svg>
+          Locked. Nice. Click or press any key to come back.
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var keyWin = document.getElementById("key-win");
+        var keyL = document.getElementById("key-l");
+        var status = document.getElementById("status");
+        var statusText = document.getElementById("status-text");
+        var lockscreen = document.getElementById("lockscreen");
+        var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        /* ---- Clock ---- */
+        var timeFmt = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" });
+        var dateFmt = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" });
+        function tick() {
+          var now = new Date();
+          var t = timeFmt.format(now);
+          document.getElementById("clock").textContent = t;
+          document.getElementById("lock-time").textContent = t;
+          document.getElementById("lock-date").textContent = dateFmt.format(now);
+        }
+        tick();
+        setInterval(tick, 1000);
+
+        /* ---- Lock state ---- */
+        var locked = false;
+        var demoTimer = null;
+
+        function setStatus(isLocked) {
+          status.classList.toggle("locked", isLocked);
+          statusText.textContent = isLocked ? "Locked. Go get that coffee." : "Desktop unlocked";
+        }
+
+        function showLock() {
+          locked = true;
+          stopDemo();
+          setStatus(true);
+          lockscreen.classList.add("show");
+        }
+
+        function hideLock() {
+          locked = false;
+          lockscreen.classList.remove("show");
+          keyWin.classList.remove("is-down");
+          keyL.classList.remove("is-down");
+          setTimeout(function () {
+            setStatus(false);
+          }, 1200);
+          startDemo(4000);
+        }
+
+        /* ---- Real keyboard input ---- */
+        var winHeld = false;
+
+        document.addEventListener("keydown", function (e) {
+          if (locked) {
+            // Ignore auto-repeat and lone modifiers so the combo itself doesn't unlock.
+            if (!e.repeat && !["Meta", "OS", "Control", "Shift", "Alt"].includes(e.key)) hideLock();
+            return;
+          }
+          if (e.key === "Meta" || e.key === "OS") {
+            winHeld = true;
+            stopDemo();
+            keyWin.classList.add("is-down");
+          } else if (e.key === "l" || e.key === "L") {
+            stopDemo();
+            keyL.classList.add("is-down");
+            if (winHeld || e.metaKey) showLock();
+          }
+        });
+
+        document.addEventListener("keyup", function (e) {
+          if (e.key === "Meta" || e.key === "OS") {
+            winHeld = false;
+            keyWin.classList.remove("is-down");
+          } else if (e.key === "l" || e.key === "L") {
+            keyL.classList.remove("is-down");
+          }
+        });
+
+        window.addEventListener("blur", function () {
+          // If the OS actually locked, the page loses focus — that counts.
+          winHeld = false;
+          keyWin.classList.remove("is-down");
+          keyL.classList.remove("is-down");
+        });
+
+        lockscreen.addEventListener("click", hideLock);
+
+        /* ---- Idle demo: press the keys on a loop ---- */
+        function stopDemo() {
+          clearTimeout(demoTimer);
+          demoTimer = null;
+        }
+
+        function startDemo(delay) {
+          if (reduceMotion) return;
+          stopDemo();
+          demoTimer = setTimeout(function step() {
+            keyWin.classList.add("is-down");
+            demoTimer = setTimeout(function () {
+              keyL.classList.add("is-down");
+              setStatus(true);
+              demoTimer = setTimeout(function () {
+                keyL.classList.remove("is-down");
+                keyWin.classList.remove("is-down");
+                demoTimer = setTimeout(function () {
+                  setStatus(false);
+                  demoTimer = setTimeout(step, 1600);
+                }, 1600);
+              }, 260);
+            }, 320);
+          }, delay);
+        }
+
+        startDemo(1200);
+      })();
+    </script>
   </body>
 </html>
